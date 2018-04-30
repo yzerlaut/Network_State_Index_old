@@ -18,7 +18,7 @@ accordingly to adapt this sample project to your needs.
 
 ----
 
-[[doc/screenshot.png]]
+![screenshot](doc/screenshot.png)
 
 
 This is the README file for the project.

@@ -1,4 +1,4 @@
-# the Waking State Index
+# Identifying Network State from Extracellular Recordings during Wakefulness in Neocortex
 
 Implements a quantitative characterization of network states in neocortex from the signal recorded by an extracellular electrode. 
 

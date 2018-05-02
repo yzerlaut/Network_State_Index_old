@@ -7,7 +7,6 @@ from src.functions import * # all functions required to make the analysis
 import matplotlib
 matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pylab as plt
 plt.style.use('ggplot')
 from PyQt5 import QtGui, QtWidgets, QtCore
@@ -24,7 +23,17 @@ matplotlib.rcParams.update({'axes.labelsize': FONTSIZE,
                             'font.size': FONTSIZE,
                             'xtick.labelsize': FONTSIZE,
                             'ytick.labelsize': FONTSIZE})
-DEFAULT_VALUES = {'alpha':2.85, 'Tstate':200, 'dt':0.1, 'gain':1., 'Tsmooth':42.}
+DEFAULT_VALUES = {'alpha':2.85,
+                  'Tstate':200,
+                  'dt':0.1,
+                  'gain':1000.,
+                  'Tsmooth':42.,
+                  'Tsubsampling':5.,
+                  'p0_percentile':1.,
+                  'Root_freq':92.,
+                  'Band_Factor':1.8,
+                  'N_wavelets':10,
+                  'xlim':[0,50]}
 
 class Window(QtWidgets.QMainWindow):
     
@@ -68,20 +77,21 @@ class Window(QtWidgets.QMainWindow):
         self.window.show()    
         self.show()
 
-        self.toolbar_zoom = NavigationToolbar(self.canvas_zoom, self)
-        self.toolbar_zoom.hide()
-        self.toolbar_large_scale_view = NavigationToolbar(self.canvas_large_view, self)
-        self.toolbar_large_scale_view.hide()
-        
-        # data initializaton
-        self.data = {'Extra':[], 'pLFP':[], 'NSI_validated':[], 't_validated':[], 'NSI':[], 'dt':[]}
-
         # program defaults
-        try:
-            self.params = dict(np.load('data/last_params.npz'))
-        except (FileNotFoundError, ValueError, IndexError, TypeError):
-            self.params = {'xlim':[0,50]}
-        # self.params = {'xlim':[0,50]} # to be deleted
+        self.params = DEFAULT_VALUES
+        # try:
+        #     self.params = dict(np.load('data/last_params.npz'))
+        # except (FileNotFoundError, ValueError, IndexError, TypeError):
+        #     self.params = {'xlim':[0,50]}
+        # data initializaton
+        
+        self.data = {'Extra':[],
+                     'pLFP':[],
+                     'NSI_validated':[],
+                     't_validated':[],
+                     'NSI':[],
+                     'dt':self.params['dt']}
+
         
         self.filename, self.folder = 'data/sample_data.npz', 'data/'
         self.load_data(self.filename)
@@ -89,11 +99,13 @@ class Window(QtWidgets.QMainWindow):
         self.zoom_plot()
 
     def zoom1(self):
+        self.statusBar().showMessage('Draw a rectangle in the TOP plot to set a new zoom')
         self.rs=RectangleSelector(self.AX_large_view, self.onselect,
                              drawtype='box',
                              rectprops = dict(facecolor='red', edgecolor = 'black', alpha=0.5, fill=True))
         
     def zoom2(self):
+        self.statusBar().showMessage('Draw a rectangle in the "BOTTOM-Vext" plot to set a new zoom')
         self.rs=RectangleSelector(self.AX_zoom[0], self.onselect,
                              drawtype='box',
                              rectprops = dict(facecolor='red', edgecolor = 'black', alpha=0.5, fill=True))
@@ -107,6 +119,7 @@ class Window(QtWidgets.QMainWindow):
         loaded_data = dict(np.load(filename))
         for key in loaded_data:
             self.data[key] = loaded_data[key]
+        self.data['Extra'] *= self.params['gain'] # we add here the Gain !
         self.dt = self.data['dt']
         self.nsamples = len(self.data['Extra'])
         self.filename_textbox.setText('Filename: '+self.filename)
@@ -206,7 +219,11 @@ class Window(QtWidgets.QMainWindow):
         
     def analyze(self):
         self.statusBar().showMessage("Analyzing data [...]")
+        f0, w0 = self.set_rootfreq.value(), self.set_bandfactor.value()
         preprocess_LFP(self.data,
+                       freqs = np.linspace(f0/w0, f0*w0, self.set_N_wvlts.value()), 
+                       # percentile_for_p0=self.set_p0_percentile.value()/100.,                   
+                       new_dt = self.set_subsampling.value()*1e-3,
                        smoothing=self.set_Tsmooth.value()*1e-3)
         compute_Network_State_Index(self.data,
                                     Tstate=self.set_Tstate.value()*1e-3,
@@ -298,13 +315,9 @@ def create_plot_window(parent, x0=10, y0=250, hspace=0.1, left=0.08, right=0.99,
     canvas_large_view = FigureCanvas(fig_large_view)
     canvas_zoom = FigureCanvas(fig_zoom)
 
-    toolbar_zoom = NavigationToolbar(canvas_zoom, window)
-    toolbar_zoom.hide()
-    
     layout = QtWidgets.QGridLayout(window)
     layout.addWidget(canvas_large_view)
     layout.addWidget(canvas_zoom)
-    layout.addWidget(toolbar_zoom)
         
     window.setLayout(layout)
             
@@ -362,39 +375,95 @@ def set_analysis_params(window, x0=10, y0=60):
     Data_label.move(x0, y0)
     # acquisision time step ---> changed here !
     window.set_alpha_text = QtWidgets.QLabel('Alpha:', window)
-    window.set_alpha_text.setMinimumWidth(300)
     window.set_alpha_text.move(x0+10, y0+30)
     window.set_alpha = QtWidgets.QDoubleSpinBox(window)
-    window.set_alpha.setMaximumWidth(100)
-    window.set_alpha.move(x0+60, y0+30)
+    window.set_alpha.setMaximumWidth(60)
+    window.set_alpha.move(x0+55, y0+30)
     window.set_alpha.setRange(0.01, 10.0)
     window.set_alpha.setDecimals(2)
     window.set_alpha.setSingleStep(0.01)
     window.set_alpha.setValue(DEFAULT_VALUES['alpha'])
     # Tstate window step ---> changed here !
     window.set_Tstate_text = QtWidgets.QLabel('Tstate:', window)
-    window.set_Tstate_text.setMinimumWidth(300)
-    window.set_Tstate_text.move(x0+200, y0+30)
+    window.set_Tstate_text.move(x0+140, y0+30)
     window.set_Tstate = QtWidgets.QDoubleSpinBox(window)
-    window.set_Tstate.setMaximumWidth(100)
+    window.set_Tstate.setMaximumWidth(80)
     window.set_Tstate.setSuffix("ms")
     window.set_Tstate.setDecimals(1)
-    window.set_Tstate.move(x0+250, y0+30)
+    window.set_Tstate.move(x0+185, y0+30)
     window.set_Tstate.setRange(1, 2000.0)
     window.set_Tstate.setSingleStep(0.1)
     window.set_Tstate.setValue(DEFAULT_VALUES['Tstate'])
-    # Tstate window step ---> changed here !
+    # Tsmoothing ---> changed here !
     window.set_Tsmooth_text = QtWidgets.QLabel('Tsmooth:', window)
-    window.set_Tsmooth_text.setMinimumWidth(300)
-    window.set_Tsmooth_text.move(x0+390, y0+30)
+    window.set_Tsmooth_text.move(x0+280, y0+30)
     window.set_Tsmooth = QtWidgets.QDoubleSpinBox(window)
-    window.set_Tsmooth.setMaximumWidth(100)
+    window.set_Tsmooth.setMaximumWidth(70)
     window.set_Tsmooth.setSuffix("ms")
     window.set_Tsmooth.setDecimals(1)
-    window.set_Tsmooth.move(x0+450, y0+30)
+    window.set_Tsmooth.move(x0+340, y0+30)
     window.set_Tsmooth.setRange(1., 200.0)
     window.set_Tsmooth.setSingleStep(0.1)
     window.set_Tsmooth.setValue(DEFAULT_VALUES['Tsmooth'])
+    # Root-Freq ---> changed here !
+    window.set_rootfreq_text = QtWidgets.QLabel('Root-Freq:', window)
+    window.set_rootfreq_text.setMinimumWidth(200)
+    window.set_rootfreq_text.move(x0+425, y0+30)
+    window.set_rootfreq = QtWidgets.QDoubleSpinBox(window)
+    window.set_rootfreq.setMaximumWidth(70)
+    window.set_rootfreq.setSuffix("Hz")
+    window.set_rootfreq.setDecimals(1)
+    window.set_rootfreq.move(x0+485, y0+30)
+    window.set_rootfreq.setRange(0.1, 100.0)
+    window.set_rootfreq.setSingleStep(0.1)
+    window.set_rootfreq.setValue(DEFAULT_VALUES['Root_freq'])
+    # Band-Factor ---> changed here !
+    window.set_bandfactor_text = QtWidgets.QLabel('Band-Factor:', window)
+    window.set_bandfactor_text.setMinimumWidth(200)
+    window.set_bandfactor_text.move(x0+565, y0+30)
+    window.set_bandfactor = QtWidgets.QDoubleSpinBox(window)
+    window.set_bandfactor.setMaximumWidth(70)
+    window.set_bandfactor.setDecimals(1)
+    window.set_bandfactor.move(x0+610, y0+30)
+    window.set_bandfactor.setRange(0.1, 100.0)
+    window.set_bandfactor.setSingleStep(0.1)
+    window.set_bandfactor.setValue(DEFAULT_VALUES['Band_Factor'])
+    # N wavelets ---> changed here !
+    window.set_N_wvlts_text = QtWidgets.QLabel('N(wavelets):', window)
+    window.set_N_wvlts_text.setMinimumWidth(200)
+    window.set_N_wvlts_text.move(x0+660, y0+30) # 
+    window.set_N_wvlts = QtWidgets.QDoubleSpinBox(window)
+    window.set_N_wvlts.setMaximumWidth(70)
+    window.set_N_wvlts.setSuffix("Hz")
+    window.set_N_wvlts.setDecimals(0)
+    window.set_N_wvlts.move(x0+700, y0+30)
+    window.set_N_wvlts.setRange(1, 100)
+    window.set_N_wvlts.setSingleStep(1)
+    window.set_N_wvlts.setValue(DEFAULT_VALUES['N_wavelets'])
+    # Subsampling ---> changed here !
+    window.set_subsampling_text = QtWidgets.QLabel('pLFP-Subsampling:', window)
+    window.set_subsampling_text.setMinimumWidth(200)
+    window.set_subsampling_text.move(x0+760, y0+30)
+    window.set_subsampling = QtWidgets.QDoubleSpinBox(window)
+    window.set_subsampling.setMaximumWidth(70)
+    window.set_subsampling.setSuffix("ms")
+    window.set_subsampling.setDecimals(1)
+    window.set_subsampling.move(x0+820, y0+30)
+    window.set_subsampling.setRange(0.1, 100.0)
+    window.set_subsampling.setSingleStep(0.1)
+    window.set_subsampling.setValue(DEFAULT_VALUES['Tsubsampling'])
+    # # p0 percentile ---> changed here !
+    # window.set_p0_percentile_text = QtWidgets.QLabel('p0 percentile:', window)
+    # window.set_p0_percentile_text.setMinimumWidth(300)
+    # window.set_p0_percentile_text.move(x0+565, y0+30)
+    # window.set_p0_percentile = QtWidgets.QDoubleSpinBox(window)
+    # window.set_p0_percentile.setMaximumWidth(100)
+    # window.set_p0_percentile.setSuffix("%")
+    # window.set_p0_percentile.setDecimals(1)
+    # window.set_p0_percentile.move(x0+650, y0+30)
+    # window.set_p0_percentile.setRange(0.1, 100.0)
+    # window.set_p0_percentile.setSingleStep(0.1)
+    # window.set_p0_percentile.setValue(DEFAULT_VALUES['p0_percentile'])
 
         
 if __name__ == '__main__':

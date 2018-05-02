@@ -11,6 +11,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 import matplotlib.pylab as plt
 plt.style.use('ggplot')
 from PyQt5 import QtGui, QtWidgets, QtCore
+from matplotlib.widgets import RectangleSelector
 
 Blue, Orange, Green, Red, Purple, Brown, Pink, Grey,\
     Kaki, Cyan = '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',\
@@ -23,7 +24,7 @@ matplotlib.rcParams.update({'axes.labelsize': FONTSIZE,
                             'font.size': FONTSIZE,
                             'xtick.labelsize': FONTSIZE,
                             'ytick.labelsize': FONTSIZE})
-DEFAULT_VALUES = {'alpha':2.85, 'Tstate':200, 'dt':0.1, 'gain':1.}
+DEFAULT_VALUES = {'alpha':2.85, 'Tstate':200, 'dt':0.1, 'gain':1., 'Tsmooth':42.}
 
 class Window(QtWidgets.QMainWindow):
     
@@ -34,7 +35,7 @@ class Window(QtWidgets.QMainWindow):
         # buttons and functions
         LABELS = ["q) Quit", "o) Open File", "r) Run analysis", "s) Save Results", "Zoom1", "Zoom2", "Reset Settings"]
         FUNCTIONS = [self.close_app, self.file_open, self.analyze, self.close_app,\
-                     self.close_app, self.close_app, self.reset_program_settings]
+                     self.zoom1, self.zoom2, self.reset_program_settings]
         button_length = 130
         self.setWindowTitle('Computing the Network State Index')
         self.setGeometry(50, 50, button_length*(0+len(LABELS)), 180)
@@ -67,6 +68,11 @@ class Window(QtWidgets.QMainWindow):
         self.window.show()    
         self.show()
 
+        self.toolbar_zoom = NavigationToolbar(self.canvas_zoom, self)
+        self.toolbar_zoom.hide()
+        self.toolbar_large_scale_view = NavigationToolbar(self.canvas_large_view, self)
+        self.toolbar_large_scale_view.hide()
+        
         # data initializaton
         self.data = {'Extra':[], 'pLFP':[], 'NSI_validated':[], 't_validated':[], 'NSI':[], 'dt':[]}
 
@@ -75,10 +81,25 @@ class Window(QtWidgets.QMainWindow):
             self.params = dict(np.load('data/last_params.npz'))
         except (FileNotFoundError, ValueError, IndexError, TypeError):
             self.params = {'xlim':[0,50]}
+        # self.params = {'xlim':[0,50]} # to be deleted
         
         self.filename, self.folder = 'data/sample_data.npz', 'data/'
         self.load_data(self.filename)
         self.large_scale_plot()
+        self.zoom_plot()
+
+    def zoom1(self):
+        self.rs=RectangleSelector(self.AX_large_view, self.onselect,
+                             drawtype='box',
+                             rectprops = dict(facecolor='red', edgecolor = 'black', alpha=0.5, fill=True))
+        
+    def zoom2(self):
+        self.rs=RectangleSelector(self.AX_zoom[0], self.onselect,
+                             drawtype='box',
+                             rectprops = dict(facecolor='red', edgecolor = 'black', alpha=0.5, fill=True))
+        
+    def onselect(self, eclick, erelease):
+        self.params['xlim'] = [min([eclick.xdata, erelease.xdata]), max([eclick.xdata, erelease.xdata])]
         self.zoom_plot()
         
     def load_data(self, filename):
@@ -92,30 +113,38 @@ class Window(QtWidgets.QMainWindow):
         self.statusBar().showMessage('Data loaded, now "Run Analysis"')
         
     def large_scale_plot(self, Nplot=2000):
-        
+        """
+        We plot everything on a single axis,
+        [10, 20] is Vext
+        [0, 10] is pLFP
+        [-10, 0] is NSI
+        """
         # large scale version
         lfp_to_plot = self.data['Extra'][::int(self.nsamples/Nplot)]
-        self.AX_large_view[0].plot(np.arange(len(lfp_to_plot))*self.data['dt']*int(self.nsamples/Nplot),
-                                   lfp_to_plot, lw=0.5, color=Grey)
-        for ax in self.AX_large_view:
-            ax.set_xlim([0, self.dt*self.nsamples])
-        self.ylim0 = self.AX_large_view[0].get_ylim()
-        self.ylim1 = self.AX_large_view[1].get_ylim()
-        self.ylim2 = self.AX_large_view[2].get_ylim()
+        ymin, ymax, ymean = np.min(lfp_to_plot), np.max(lfp_to_plot), np.mean(lfp_to_plot)
+        scaling = 10./(ymax-ymin)
+        self.AX_large_view.plot(np.arange(len(lfp_to_plot))*self.dt*int(self.nsamples/Nplot),
+                                (lfp_to_plot-ymean)*scaling+15., lw=0.5, color=Grey)
+        self.AX_large_view.set_xlim([0, self.dt*self.nsamples])
 
     def large_scale_plot_NSI(self, Nplot=2000):
         
         # large scale version
         Nsamples = len(self.data['pLFP'])
         plfp_to_plot = self.data['pLFP'][::int(Nsamples/Nplot)]
-        self.AX_large_view[1].plot(np.arange(len(plfp_to_plot))*self.data['new_dt']*int(Nsamples/Nplot),
-                                   plfp_to_plot, lw=0.5, color=Brown)
+
+        ymin, ymax, ymean = np.min(plfp_to_plot), np.max(plfp_to_plot), np.mean(plfp_to_plot)
+        scaling = 10./(ymax-ymin)
+        self.AX_large_view.plot(np.arange(len(plfp_to_plot))*self.data['new_dt']*int(Nsamples/Nplot),
+                                (plfp_to_plot-ymean)*scaling+5., lw=0.5, color=Brown)
+
+        y = self.data['NSI'][self.data['NSI_validated']]
+        ymin, ymax, ymean = np.min(y), np.max(y), np.mean(y)
+        scaling = 10./(ymax-ymin)
         cond1 = self.data['NSI_validated'] & (self.data['NSI']>0)
-        self.AX_large_view[2].plot(self.data['new_t'][cond1], self.data['NSI'][cond1], '.', ms=0.2, color=Kaki)
+        self.AX_large_view.plot(self.data['new_t'][cond1], (self.data['NSI'][cond1]-ymean)*scaling-5.,'.',ms=0.2, color=Kaki)
         cond2 = self.data['NSI_validated'] & (self.data['NSI']<=0)
-        self.AX_large_view[2].plot(self.data['new_t'][cond2], self.data['NSI'][cond2], '.', ms=0.2, color=Purple)
-        self.ylim1 = np.min(plfp_to_plot), np.max(plfp_to_plot)
-        self.ylim2 = np.min(self.data['NSI'][self.data['NSI_validated']]), np.max(self.data['NSI'][self.data['NSI_validated']])
+        self.AX_large_view.plot(self.data['new_t'][cond2],(self.data['NSI'][cond2]-ymean)*scaling-5.,'.',ms=0.2, color=Purple)
         self.canvas_large_view.draw()
         
     def zoom_plot(self, Nplot=2000):
@@ -124,27 +153,30 @@ class Window(QtWidgets.QMainWindow):
         for ax in self.AX_zoom:
             while len(ax.lines)>0:
                 del ax.lines[-1] # removing the previous plots
+            while len(ax.collections)>0:
+                del ax.collections[-1] # removing the previous plots
         
         i1, i2 = int(self.params['xlim'][0]/self.dt), int(self.params['xlim'][1]/self.dt)
-        lfp_to_plot = self.data['Extra'][i1:i2][::int((i2-i1)/Nplot)]
-        self.AX_zoom[0].plot(np.arange(len(lfp_to_plot))*self.data['dt']*int((i2-i1)/Nplot),
+        isubsampling = max([1,int((i2-i1)/Nplot)])
+        lfp_to_plot = self.data['Extra'][i1:i2][::isubsampling]
+        self.AX_zoom[0].plot(np.arange(len(lfp_to_plot))*self.dt*isubsampling+self.params['xlim'][0],
                              lfp_to_plot, lw=0.5, color=Grey)
-        self.AX_zoom[0].set_xlim([i1*self.dt, i2*self.dt])
+        # self.AX_zoom[0].set_xlim([i1*self.dt, i2*self.dt])
 
         if len(self.data['pLFP'])>0:
             
             i1, i2 = int(self.params['xlim'][0]/self.data['new_dt']), int(self.params['xlim'][1]/self.data['new_dt'])
             # plotting pLFP variations
-            plfp_to_plot = self.data['pLFP'][i1:i2][::int((i2-i1)/Nplot)]
-            self.AX_zoom[1].plot(np.arange(len(plfp_to_plot))*self.data['new_dt']*int((i2-i1)/Nplot),
+            isubsampling = max([1,int((i2-i1)/Nplot)])
+            plfp_to_plot = self.data['pLFP'][i1:i2][::isubsampling]
+            self.AX_zoom[1].plot(np.arange(len(plfp_to_plot))*self.data['new_dt']*isubsampling+self.params['xlim'][0],
                                  plfp_to_plot, lw=1, color=Brown)
-            self.AX_zoom[1].set_xlim([i1*self.data['new_dt'], i2*self.data['new_dt']])
+            # self.AX_zoom[1].set_xlim([i1*self.data['new_dt'], i2*self.data['new_dt']])
             
             # plotting NSI variations
-            nsi_to_plot = self.data['NSI'][i1:i2][::int((i2-i1)/Nplot)]
-            self.AX_zoom[2].plot(np.arange(len(plfp_to_plot))*self.data['new_dt']*int((i2-i1)/Nplot),
+            nsi_to_plot = self.data['NSI'][i1:i2][::isubsampling]
+            self.AX_zoom[2].plot(np.arange(len(plfp_to_plot))*self.data['new_dt']*isubsampling+self.params['xlim'][0],
                                  nsi_to_plot, lw=0.5, color='k')
-            self.AX_zoom[2].set_xlim([i1*self.data['new_dt'], i2*self.data['new_dt']])
 
             # plotting validated NSI
             cond = self.data['NSI_validated'] &\
@@ -156,23 +188,29 @@ class Window(QtWidgets.QMainWindow):
             self.AX_zoom[2].plot(self.data['new_t'][cond & (self.data['NSI']<=0)],
                                  self.data['NSI'][cond & (self.data['NSI']<=0)], 'o',
                                  ms=1, color=Purple)
+            self.AX_zoom[1].plot(self.params['xlim'], self.data['p0']*np.ones(2), '--', lw=0.1, color=Brown)
+        self.AX_zoom[2].plot(self.params['xlim'], [0,0], '--', lw=0.1, color='k')
+
+        for ax in self.AX_zoom:
+            ax.set_xlim(self.params['xlim'])
             
         self.canvas_zoom.draw()
-            
+
         # highlighting zoom area in the large plot
         i1, i2 = int(self.params['xlim'][0]/self.dt), int(self.params['xlim'][1]/self.dt)
-        for ax, ylim in zip(self.AX_large_view, [self.ylim0, self.ylim1, self.ylim2]):
-            while len(ax.collections)>0:
-                del ax.collections[-1] # removing the previous highlight !
-            ax.fill_between([i1*self.dt, i2*self.dt], np.ones(2)*ylim[0], np.ones(2)*ylim[1], color='r', alpha=.2, lw=0)
-            ax.set_ylim(ylim)
+        while len(self.AX_large_view.collections)>0:
+            del self.AX_large_view.collections[-1] # removing the previous highlight !
+        self.AX_large_view.fill_between([i1*self.dt, i2*self.dt], [-10,-10], [20,20], color='r', alpha=.2, lw=0)
+        self.AX_large_view.set_ylim([-10,20])
         self.canvas_large_view.draw()
         
     def analyze(self):
         self.statusBar().showMessage("Analyzing data [...]")
-        preprocess_LFP(self.data)
+        preprocess_LFP(self.data,
+                       smoothing=self.set_Tsmooth.value()*1e-3)
         compute_Network_State_Index(self.data,
                                     Tstate=self.set_Tstate.value()*1e-3,
+                                    T_sliding_mean=2.*self.set_Tstate.value()*1e-3,
                                     alpha=self.set_alpha.value())
         # now updating plots
         self.large_scale_plot_NSI()
@@ -232,11 +270,11 @@ def create_plot_window(parent, x0=10, y0=250, hspace=0.1, left=0.08, right=0.99,
 
     width, height = parent.screensize[0]/1.1, parent.screensize[1]/1.5
     
-    fig_large_view, AX_large_view = plt.subplots(3, 1, figsize=(figsize[0], figsize[1]/1.5))
+    fig_large_view, AX_large_view = plt.subplots(1, figsize=(figsize[0], figsize[1]/1.5))
     plt.subplots_adjust(hspace=hspace, left=left, right=right, bottom=1.5*bottom)
-    AX_large_view[0].set_xticklabels([])
-    AX_large_view[1].set_xticklabels([])
-    # AX_large_view[2].set_xlabel('time (s)')
+    AX_large_view.set_xlabel('time (s)')
+    AX_large_view.set_yticks([])
+    AX_large_view.set_ylim([-10, 20])
         
     fig_zoom, AX_zoom  = plt.subplots(3, 1, figsize=(figsize[0], figsize[1]))
     plt.subplots_adjust(hspace=hspace, left=left, right=right, bottom=bottom)
@@ -244,12 +282,12 @@ def create_plot_window(parent, x0=10, y0=250, hspace=0.1, left=0.08, right=0.99,
     AX_zoom[1].set_xticklabels([])
     AX_zoom[2].set_xlabel('time (s)')
             
-    for ax1, ax2, label in zip(AX_large_view, AX_zoom,
-                               ['$V_{ext}$ ($\mu$V)', 'pLFP ($\mu$V)', 'NSI ($\mu$V)']):
-        ax1.set_ylabel(label+'              ', rotation=0)
+    for ax2, label in zip(AX_zoom, ['$V_{ext}$ ($\mu$V)', 'pLFP ($\mu$V)', 'NSI ($\mu$V)']):
         ax2.set_ylabel(label)
-        ax1.set_yticks([])
-    
+    for x, col, label in zip([0.75, 0.55, 0.35], [Grey, Brown, 'k'],
+                             ['$V_{ext}$', 'pLFP', 'NSI']):
+        AX_large_view.annotate(label, (0.03, x), color=col, xycoords='figure fraction')
+        
     # Window size choosen appropriately
     window = QtWidgets.QDialog()
     window.setGeometry(x0, y0, width, height)
@@ -333,7 +371,7 @@ def set_analysis_params(window, x0=10, y0=60):
     window.set_alpha.setDecimals(2)
     window.set_alpha.setSingleStep(0.01)
     window.set_alpha.setValue(DEFAULT_VALUES['alpha'])
-    # # acquisision time step ---> changed here !
+    # Tstate window step ---> changed here !
     window.set_Tstate_text = QtWidgets.QLabel('Tstate:', window)
     window.set_Tstate_text.setMinimumWidth(300)
     window.set_Tstate_text.move(x0+200, y0+30)
@@ -345,6 +383,18 @@ def set_analysis_params(window, x0=10, y0=60):
     window.set_Tstate.setRange(1, 2000.0)
     window.set_Tstate.setSingleStep(0.1)
     window.set_Tstate.setValue(DEFAULT_VALUES['Tstate'])
+    # Tstate window step ---> changed here !
+    window.set_Tsmooth_text = QtWidgets.QLabel('Tsmooth:', window)
+    window.set_Tsmooth_text.setMinimumWidth(300)
+    window.set_Tsmooth_text.move(x0+390, y0+30)
+    window.set_Tsmooth = QtWidgets.QDoubleSpinBox(window)
+    window.set_Tsmooth.setMaximumWidth(100)
+    window.set_Tsmooth.setSuffix("ms")
+    window.set_Tsmooth.setDecimals(1)
+    window.set_Tsmooth.move(x0+450, y0+30)
+    window.set_Tsmooth.setRange(1., 200.0)
+    window.set_Tsmooth.setSingleStep(0.1)
+    window.set_Tsmooth.setValue(DEFAULT_VALUES['Tsmooth'])
 
         
 if __name__ == '__main__':

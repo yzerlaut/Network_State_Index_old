@@ -115,7 +115,7 @@ def Validate_Network_States(data,
         if np.array(np.abs(data['NSI'][i-iTstate:i+iTstate]-data['NSI'][i])<=Var_criteria).all():
             data['NSI_validated'][i]=True
         else:
-            data['NSI__unvalidated'][i]=True
+            data['NSI_unvalidated'][i]=True
 
     data['t_validated'] = data['new_t'][data['NSI_validated']]
     data['i_validated'] = np.arange(len(data['pLFP']))[data['NSI_validated']]
@@ -125,7 +125,7 @@ def compute_Network_State_Index(data,
                                 key='pLFP',
                                 freqs = np.linspace(2,10,20),
                                 Tstate=200e-3,
-                                Var_criteria=2,
+                                # Var_criteria=2,
                                 alpha=2.85,
                                 T_sliding_mean=0.5,
                                 already_low_freqs_and_mean=False):
@@ -145,7 +145,8 @@ def compute_Network_State_Index(data,
     
     Validate_Network_States(data,
                             Tstate=Tstate,
-                            Var_criteria=Var_criteria)
+                            # Var_criteria=Var_criteria,
+                            Var_criteria=data['p0'])
     
     
 if __name__=='__main__':

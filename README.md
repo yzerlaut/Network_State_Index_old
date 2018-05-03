@@ -49,18 +49,44 @@ pip install neo
 
 ----
 
-## GUI Demo
+## GUI Screenshot
 
 ![screenshot](doc/screenshot.png)
 
+## GUI features
 
-## Electrophysiological data supported
+### Load data:
 
-- Axon Instruments (pClamp) ".abf" format
+    ##### Electrophysiological data supported
 
-- Binary format ()
+    - Axon Instruments (pClamp) ".abf" format
 
-- Numpy storing formats (either ".npy" or ".npz")
+    - HDF5 ".h5" format
+
+    - Numpy storing formats (".npz" storing a dictionary)
+
+    You can set the desired channel to analyze and the gain that should be applied (only if you want it in uV)
+
+### Run analysis:
+
+    It computes the NSI measure over the whole data.
+    It can be a bit long if the data are large.
+    
+### Visualize the data and the output of the NSI analysis
+
+    In the top 3 plots, we show the full (subsampled) data.
+
+    In the bottom 3 plots, we show a zoomed (subsampled) portion of the data. Highlighted with a red filled rectangle in the top plot. 
+
+### Zoom :
+
+    - Zoom1: When clicking on this button, you can select a time window in the top plot
+    - Zoom2: When clicking on this button, you can select a time window in the bottom-Vext plot
+
+### Save the output of the analysis:
+
+    The output is stored as an hdf5 datafile.
+    It containes the sample times of validated network states and their associated NSI level.
 
 
 [packaging guide]: https://packaging.python.org

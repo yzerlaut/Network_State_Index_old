@@ -4,6 +4,10 @@ import numpy as np
 from scipy import signal
 from scipy.ndimage.filters import gaussian_filter1d
 
+Blue, Orange, Green, Red, Purple, Brown, Pink, Grey,\
+    Kaki, Cyan = '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',\
+    '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+
 ##############################################
 ########### Wavelet Transform ################
 ##############################################
@@ -64,6 +68,8 @@ def gaussian_smoothing(Signal, idt_sbsmpl=10.):
 def preprocess_LFP(data,
                    freqs = np.linspace(50, 300, 5), 
                    new_dt = 5e-3,
+                   Vext_key='Extra',
+                   gain=1.,
                    smoothing=42e-3,
                    percentile_for_p0=0.01,                   
                    pLFP_unit='$\mu$V'):
@@ -72,7 +78,7 @@ def preprocess_LFP(data,
     """
 
     # performing wavelet transform
-    data['W'] = my_cwt(data['Extra'].flatten(), freqs, data['dt']) 
+    data['W'] = my_cwt(gain*data[Vext_key].flatten(), freqs, data['dt']) 
     data['pLFP_freqs'] = freqs # keeping track of the frequency used
 
     # taking the mean power over the frequency content considered

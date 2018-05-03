@@ -1,11 +1,9 @@
 # Identifying Network State from Extracellular Recordings during Wakefulness in Neocortex
 
-Implements a quantitative characterization of network states in neocortex from the signal recorded by an extracellular electrode.
-
-[The source for the implementation is available here][src].
-
-See the paper details about the method.
-
+Implements a quantitative characterization of network states in neocortex from the signal recorded by an extracellular electrode. See the paper details about the method.
+----
+## GUI Screenshot
+![screenshot](doc/screenshot.png)
 ----
 
 ## Dependencies
@@ -50,10 +48,6 @@ pip install neo
   ```
 
 ----
-
-## GUI Screenshot
-
-![screenshot](doc/screenshot.png)
 
 ## GUI features
 

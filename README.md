@@ -1,6 +1,16 @@
 # Identifying Network State from Extracellular Recordings during Wakefulness in Neocortex
 
-Implements a quantitative characterization of network states in neocortex from the signal recorded by an extracellular electrode. 
+Implements a quantitative characterization of network states in neocortex from the signal recorded by an extracellular electrode.
+
+[The source for the impementation is available here][src].
+
+See the paper details about the method.
+
+## Installation
+
+- Install a scientific python distribution (the [Anaconda version][https://www.anaconda.com/download] is a very good one). Choose the [Python 3][] version.
+
+
 
 A sample project that exists as an aid to the [Python Packaging User
 Guide][packaging guide]'s [Tutorial on Packaging and Distributing
@@ -10,7 +20,6 @@ This project does not aim to cover best practices for Python project
 development as a whole. For example, it does not provide guidance or tool
 recommendations for version control, documentation, or testing.
 
-[The source for this project is available here][src].
 
 Most of the configuration for a Python project is done in the `setup.py` file,
 an example of which is included in this project. You should edit this file

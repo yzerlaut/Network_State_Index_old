@@ -2,6 +2,7 @@ import sys, os, pathlib
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 from src.functions import * # all functions required to make the analysis
+from src.IO import * # module to load data, including electrophysiogical recordings
 
 # then modules for GUI
 import matplotlib

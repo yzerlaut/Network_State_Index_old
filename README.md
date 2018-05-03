@@ -42,7 +42,7 @@ pip install neo
   Open the terminal (or the MsWin Command Prompt)
   
   ```
-  cd path_where_you_have_extracted_or_cloned_the_archive/Waking_State_Index/
+  cd path_where_you_have_extracted_or_cloned_the_archive/Waking_State_Index/ # replace 'cd' by 'chdir' on MSWin
   
   python src/gui.py
   ```
@@ -57,36 +57,36 @@ pip install neo
 
 ### Load data:
 
-    ##### Electrophysiological data supported
+##### Electrophysiological data supported
 
-    - Axon Instruments (pClamp) ".abf" format
+- Axon Instruments (pClamp) ".abf" format
 
-    - HDF5 ".h5" format
+- HDF5 ".h5" format
 
-    - Numpy storing formats (".npz" storing a dictionary)
+- Numpy storing formats (".npz" storing a dictionary)
 
-    You can set the desired channel to analyze and the gain that should be applied (only if you want it in uV)
+You can set the desired channel to analyze and the gain that should be applied (only if you want it in uV)
 
 ### Run analysis:
 
-    It computes the NSI measure over the whole data.
-    It can be a bit long if the data are large.
-    
+It computes the NSI measure over the whole data.
+It can be a bit long if the data are large.
+
 ### Visualize the data and the output of the NSI analysis
 
-    In the top 3 plots, we show the full (subsampled) data.
+In the top 3 plots, we show the full (subsampled) data.
 
-    In the bottom 3 plots, we show a zoomed (subsampled) portion of the data. Highlighted with a red filled rectangle in the top plot. 
+In the bottom 3 plots, we show a zoomed (subsampled) portion of the data. Highlighted with a red filled rectangle in the top plot. 
 
 ### Zoom :
 
-    - Zoom1: When clicking on this button, you can select a time window in the top plot
-    - Zoom2: When clicking on this button, you can select a time window in the bottom-Vext plot
+- Zoom1: When clicking on this button, you can select a time window in the top plot
+- Zoom2: When clicking on this button, you can select a time window in the bottom-Vext plot
 
 ### Save the output of the analysis:
 
-    The output is stored as an hdf5 datafile.
-    It containes the sample times of validated network states and their associated NSI level.
+The output is stored as an hdf5 datafile.
+It containes the sample times of validated network states and their associated NSI level.
 
 
 [packaging guide]: https://packaging.python.org

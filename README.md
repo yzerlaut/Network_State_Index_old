@@ -15,14 +15,14 @@ See the paper details about the method.
 - Install a scientific python distribution (the [Anaconda version][anaconda] is a very good one). Choose the Python 3 version. It contains [Numpy][numpy] and [Scipy][scipy].
 
 - Install PyQT5 (for the graphical interface): open the terminal (or the MsWin console) and run:
-'''
+```
 pip install PyQT5
-'''
+```
 
 - Install Neo (to between electrophysiological data): open the terminal (or the MsWin console) and run:
-'''
+```
 pip install neo
-'''
+```		
 
 ----
 

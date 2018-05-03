@@ -2,7 +2,7 @@
 
 Implements a quantitative characterization of network states in neocortex from the signal recorded by an extracellular electrode.
 
-[The source for the impementation is available here][src].
+[The source for the implementation is available here][src].
 
 See the paper details about the method.
 
@@ -10,7 +10,9 @@ See the paper details about the method.
 
 ## Dependencies
 
-[Python 3][python], [Numpy][numpy], [Scipy][scipy], [Neo][neo], [PyQT][pyqt]
+- [Python 3][python], [Numpy][numpy], [Scipy][scipy]
+- [Neo][neo] to be able to load electrophysiological data
+- [PyQT][pyqt] for the Graphical User Interface (GUI), -- optional --
 
 ----
 
@@ -18,12 +20,12 @@ See the paper details about the method.
 
 - Install a scientific python distribution (the [Anaconda version][anaconda] is a very good one). Choose the Python 3 version. It contains [Numpy][numpy] and [Scipy][scipy].
 
-- Install PyQT5 (for the graphical interface): open the terminal (or the MsWin Command Prompt) and run:
+- Install PyQT5: open the terminal (or the MsWin Command Prompt) and run:
 ```
 pip install PyQT5
 ```
 
-- Install Neo (to between electrophysiological data): open the terminal (or the MsWin Command Prompt) and run:
+- Install Neo: open the terminal (or the MsWin Command Prompt) and run:
 ```
 pip install neo
 ```

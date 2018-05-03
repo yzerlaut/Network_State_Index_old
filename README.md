@@ -6,27 +6,50 @@ Implements a quantitative characterization of network states in neocortex from t
 
 See the paper details about the method.
 
+----
+
 ## Dependencies
 
 [Python 3][python], [Numpy][numpy], [Scipy][scipy], [Neo][neo], [PyQT][pyqt]
+
+----
 
 ## Installation
 
 - Install a scientific python distribution (the [Anaconda version][anaconda] is a very good one). Choose the Python 3 version. It contains [Numpy][numpy] and [Scipy][scipy].
 
-- Install PyQT5 (for the graphical interface): open the terminal (or the MsWin console) and run:
+- Install PyQT5 (for the graphical interface): open the terminal (or the MsWin Command Prompt) and run:
 ```
 pip install PyQT5
 ```
 
-- Install Neo (to between electrophysiological data): open the terminal (or the MsWin console) and run:
+- Install Neo (to between electrophysiological data): open the terminal (or the MsWin Command Prompt) and run:
 ```
 pip install neo
-```		
+```
+
+- Download the present code
+  1) If you have git
+  ```
+	git clone https://github.com/yzerlaut/Waking_State_Index.git
+  ```
+
+  2) If you don't, download the zip archive: [https://github.com/yzerlaut/Waking_State_Index/archive/master.zip] and extract it.
 
 ----
 
-## Demo
+## Run the program
+  Open the terminal (or the MsWin Command Prompt)
+  
+  ```
+  cd path_where_you_have_extracted_or_cloned_the_archive/Waking_State_Index/
+  
+  python src/gui.py
+  ```
+
+----
+
+## GUI Demo
 
 ![screenshot](doc/screenshot.png)
 

@@ -23,7 +23,7 @@ matplotlib.rcParams.update({'axes.labelsize': FONTSIZE,
                             'ytick.labelsize': FONTSIZE})
 
 
-DEFAULT_VALUES = {'alpha':2.85,
+DEFAULT_VALUES = {'alpha':2.95,
                   'Tstate':200,
                   'dt':0.1,
                   'gain':1000.,
@@ -253,16 +253,20 @@ class Window(QtWidgets.QMainWindow):
     def file_open(self):
         name=QtWidgets.QFileDialog.getOpenFileName(self, 'Open File',\
                                                    self.folder)
-        try:
-            self.filename = name[0]
-            self.folder = os.path.dirname(self.filename)
-            self.load_data(self.filename)
-            self.update_keys()
-            self.large_scale_plot()
-            self.zoom_plot()
-            self.statusBar.showMessage('Data succesfully loaded !')
-        except FileNotFoundError:
-            self.statusBar.showMessage('/!\ No datafile found... ')
+        if name[0]!='':
+            try:
+                self.filename = name[0]
+                self.folder = os.path.dirname(self.filename)
+                self.load_data(self.filename)
+                self.update_keys()
+                self.large_scale_plot()
+                self.zoom_plot()
+                self.statusBar.showMessage('Data succesfully loaded !')
+            except FileNotFoundError:
+                self.statusBar.showMessage('/!\ No datafile found... ')
+        else:
+            print('No datafile provided')
+                
             
     def update_keys(self):
         self.set_acq_channel.clear() # delete all items from comboBox

@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 def load_formatted_data(filename):
-    print(filename)
+    print('Opening: ', filename)
     if filename.endswith('.npz'):
         data = dict(np.load(filename))
         data['Channel_Keys'] = ['Extra']
@@ -16,9 +16,12 @@ def load_formatted_data(filename):
         for key in data.keys():
             if key not in ['dt', 'params', 't', 'Channel_Keys']:
                 data['Channel_Keys'].append(key)
-        data['dt'] = float(data['params']['dt'])
+        try:
+            data['dt'] = float(data['params']['dt'])
+        except KeyError:
+            print('time step not found in HDF5 file !')
     else:
-        data = {}
+        data = {'dt':1e-3}
     return data
 
 """
@@ -125,17 +128,16 @@ def load_axon_file(filename, zoom=[0,np.inf]):
     except FileNotFoundError:
         print('File not Found !')
         return {}
-
-
-if __name__ == '__main__':
-    import sys
-    filename = sys.argv[-1]
-    data = load_axon_file(filename)
-    print(data.keys())
-    # # AxonIO(filename).read_block(lazy=False)
-    # print(get_metadata(filename))
-    # t, data = load_file(filename, zoom=[-5.,np.inf])
-    # # for i in range(10):
-    # #     plt.plot(t, data[0][i])
-    # plt.plot(t, data[0])
-    # plt.show()
+    
+# if __name__ == '__main__':
+#     import sys
+#     filename = sys.argv[-1]
+#     data = load_axon_file(filename)
+#     print(data.keys())
+#     # AxonIO(filename).read_block(lazy=False)
+#     print(get_metadata(filename))
+#     t, data = load_file(filename, zoom=[-5.,np.inf])
+#     # for i in range(10):
+#     #     plt.plot(t, data[0][i])
+#     plt.plot(t, data[0])
+#     plt.show()

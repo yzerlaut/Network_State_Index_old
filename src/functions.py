@@ -66,8 +66,8 @@ def gaussian_smoothing(Signal, idt_sbsmpl=10.):
     return gaussian_filter1d(Signal, idt_sbsmpl)
 
 def preprocess_LFP(data,
-                   freqs = np.linspace(50, 300, 5), 
-                   new_dt = 5e-3,
+                   freqs = np.linspace(50, 300, 5),
+                   new_dt = 5e-3, # desired subsampling freq.
                    Vext_key='Extra',
                    gain=1.,
                    smoothing=42e-3,
@@ -76,7 +76,7 @@ def preprocess_LFP(data,
     """
     performs continuous wavelet transform and smooth the time-varying high-gamma freq power
     """
-
+    
     # performing wavelet transform
     data['W'] = my_cwt(gain*data[Vext_key].flatten(), freqs, data['dt']) 
     data['pLFP_freqs'] = freqs # keeping track of the frequency used
@@ -129,7 +129,7 @@ def Validate_Network_States(data,
     
 def compute_Network_State_Index(data,
                                 key='pLFP',
-                                freqs = np.linspace(2,10,20),
+                                freqs = np.linspace(2,4,5),
                                 Tstate=200e-3,
                                 # Var_criteria=2,
                                 alpha=2.85,

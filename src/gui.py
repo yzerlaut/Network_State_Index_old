@@ -30,10 +30,10 @@ DEFAULT_VALUES = {'alpha':2.95,
                   'Tsmooth':42.,
                   'Tsubsampling':5.,
                   'p0_percentile':1.,
-                  'Root_freq':92.,
+                  'Root_freq':72.,
                   'Band_Factor':1.8,
                   'N_wavelets':10,
-                  'xlim':[0,50]}
+                  'xlim':[0,20]}
 
 class Window(QtWidgets.QMainWindow):
     
@@ -75,26 +75,29 @@ class Window(QtWidgets.QMainWindow):
             self.AX_large_view, self.AX_zoom,\
             self.canvas_large_view, self.canvas_zoom = create_plot_window(self)
 
-        self.data = {} # initialized to empty data
+        self.data = {'dt':100} # initialized to empty data
         # program defaults
         self.params = DEFAULT_VALUES
-        # try:
-        #     self.params = dict(np.load('data/last_params.npz'))
-        # except (FileNotFoundError, ValueError, IndexError, TypeError):
-        #     self.params = {'xlim':[0,50]}
-        # data initializaton
         
+        try:
+            old_params = dict(np.load('data/last_params.npz'))
+            for key in old_params:
+                self.params[key] = old_params[key]
+        except (FileNotFoundError, ValueError, IndexError, TypeError, KeyError):
+            pass
+        self.filename, self.folder = 'data/sample_data.npz', 'data/'
+
         ## ------------ Recording and Analysis parameters ----------- ##
         set_recording_params(self, y0=30)
         set_analysis_params(self, y0=90)
         
-        self.filename, self.folder = 'data/sample_data.npz', 'data/'
         self.window.show()    
         self.show()
         
-        # self.load_data(self.filename)
-        # self.large_scale_plot()
-        # self.zoom_plot()
+        self.load_data(self.filename)
+        self.set_acq_dt.setValue(1e6*self.data['dt'])
+        self.large_scale_plot()
+        self.zoom_plot()
 
     def zoom1(self):
         self.statusBar.showMessage('Draw a rectangle in the TOP plot to set a new zoom')
@@ -113,13 +116,19 @@ class Window(QtWidgets.QMainWindow):
         self.zoom_plot()
         
     def load_data(self, filename):
+        
+        self.filename = str(filename)
+
         self.statusBar.showMessage('loading data [...]')
-        self.data = load_formatted_data(filename) # see function in src/IO.py
+        
+        self.data = load_formatted_data(self.filename) # see function in src/IO.py
         self.Vext_key = self.data['Channel_Keys'][0] # first key by default
         self.dt = self.data['dt']
         self.nsamples = len(self.set_acq_gain.value()*self.data[self.Vext_key])
         self.filename_textbox.setText('Filename: '+self.filename)
         self.statusBar.showMessage('Data loaded, now "Run Analysis"')
+
+
         
     def large_scale_plot(self, Nplot=2000):
         """
@@ -146,22 +155,27 @@ class Window(QtWidgets.QMainWindow):
     def large_scale_plot_NSI(self, Nplot=2000):
         
         # large scale version
-        Nsamples = len(self.data['pLFP'])
-        plfp_to_plot = self.data['pLFP'][::int(Nsamples/Nplot)]
+        if 'pLFP' in self.data:
+            Nsamples = len(self.data['pLFP'])
+            plfp_to_plot = self.data['pLFP'][::int(Nsamples/Nplot)]
 
-        ymin, ymax, ymean = np.min(plfp_to_plot), np.max(plfp_to_plot), np.mean(plfp_to_plot)
-        scaling = 10./(ymax-ymin)
-        self.AX_large_view.plot(np.arange(len(plfp_to_plot))*self.data['new_dt']*int(Nsamples/Nplot),
-                                (plfp_to_plot-ymean)*scaling+5., lw=0.5, color=Brown)
+            ymin, ymax, ymean = np.min(plfp_to_plot), np.max(plfp_to_plot), np.mean(plfp_to_plot)
+            scaling = 10./(ymax-ymin)
+            self.AX_large_view.plot(np.arange(len(plfp_to_plot))*self.data['new_dt']*int(Nsamples/Nplot),
+                                    (plfp_to_plot-ymean)*scaling+5., lw=0.5, color=Brown)
 
-        y = self.data['NSI'][self.data['NSI_validated']]
-        ymin, ymax, ymean = np.min(y), np.max(y), np.mean(y)
-        scaling = 10./(ymax-ymin)
-        cond1 = self.data['NSI_validated'] & (self.data['NSI']>0)
-        self.AX_large_view.plot(self.data['new_t'][cond1], (self.data['NSI'][cond1]-ymean)*scaling-5.,'.',ms=0.2, color=Kaki)
-        cond2 = self.data['NSI_validated'] & (self.data['NSI']<=0)
-        self.AX_large_view.plot(self.data['new_t'][cond2],(self.data['NSI'][cond2]-ymean)*scaling-5.,'.',ms=0.2, color=Purple)
-        self.canvas_large_view.draw()
+            y = self.data['NSI'][self.data['NSI_validated']]
+            ymin, ymax, ymean = np.min(y), np.max(y), np.mean(y)
+            scaling = 10./(ymax-ymin)
+            cond1 = self.data['NSI_validated'] & (self.data['NSI']>0)
+            self.AX_large_view.plot(self.data['new_t'][cond1], (self.data['NSI'][cond1]-ymean)*scaling-5.,'.',ms=0.2, color=Kaki)
+            cond2 = self.data['NSI_validated'] & (self.data['NSI']<=0)
+            self.AX_large_view.plot(self.data['new_t'][cond2],(self.data['NSI'][cond2]-ymean)*scaling-5.,'.',ms=0.2, color=Purple)
+            self.canvas_large_view.draw()
+        else:
+            self.AX_large_view.annotate('need to "Run analysis"', (0.02,0.1), xycoords='axes fraction')
+            self.canvas_large_view.draw()
+            
         
     def zoom_plot(self, Nplot=2000):
 
@@ -172,7 +186,6 @@ class Window(QtWidgets.QMainWindow):
             while len(ax.collections)>0:
                 del ax.collections[-1] # removing the previous plots
 
-                
         if ((self.Vext_key in self.data) and ('dt' in self.data)):
             i1, i2 = int(self.params['xlim'][0]/self.data['dt']), int(self.params['xlim'][1]/self.data['dt'])
             isubsampling = max([1,int((i2-i1)/Nplot)])
@@ -213,7 +226,6 @@ class Window(QtWidgets.QMainWindow):
                                  self.data['NSI'][cond & (self.data['NSI']<=0)], 'o',
                                  ms=1, color=Purple)
             self.AX_zoom[1].plot(self.params['xlim'], self.data['p0']*np.ones(2), '--', lw=0.1, color=Brown)
-            
 
         for ax in self.AX_zoom:
             ax.set_xlim(self.params['xlim'])
@@ -237,7 +249,7 @@ class Window(QtWidgets.QMainWindow):
         preprocess_LFP(self.data,
                        gain = self.set_acq_gain.value(),
                        Vext_key=self.Vext_key,
-                       freqs = np.linspace(f0/w0, f0*w0, self.set_N_wvlts.value()), 
+                       freqs = np.linspace(f0/w0, f0*w0, self.set_N_wvlts.value()),
                        # percentile_for_p0=self.set_p0_percentile.value()/100.,                   
                        new_dt = self.set_subsampling.value()*1e-3,
                        smoothing=self.set_Tsmooth.value()*1e-3)
@@ -251,8 +263,10 @@ class Window(QtWidgets.QMainWindow):
         self.statusBar.showMessage("Data Analyzed !")
     
     def file_open(self):
+        print(self.folder)
         name=QtWidgets.QFileDialog.getOpenFileName(self, 'Open File',\
                                                    self.folder)
+        print(name)
         if name[0]!='':
             try:
                 self.filename = name[0]
@@ -280,6 +294,9 @@ class Window(QtWidgets.QMainWindow):
         
     def close_app(self):
         if self.params is not None:
+            print(self.filename, self.folder)
+            self.params['filename'] = self.filename
+            self.params['folder'] = self.folder
             np.savez('data/last_params.npz', **self.params)
         sys.exit()
         
@@ -296,7 +313,7 @@ class Window(QtWidgets.QMainWindow):
             self.statusBar.showMessage('Need to perform analysis first...')
 
     def reset_program_settings(self):
-        self.params = {'xlim':[0,50]}
+        self.params = {'xlim':[0,20]}
         self.set_acq_dt.setValue(DEFAULT_VALUES['dt'])
         self.set_acq_gain.setValue(DEFAULT_VALUES['gain'])
         self.set_Tstate.setValue(DEFAULT_VALUES['Tstate'])
@@ -363,8 +380,8 @@ def set_recording_params(window, x0=10, y0=30):
     window.set_acq_dt = QtWidgets.QDoubleSpinBox(window)
     window.set_acq_dt.setMaximumWidth(100)
     window.set_acq_dt.move(x0+100, y0+30)
-    window.set_acq_dt.setRange(0.001, 100.0)
-    window.set_acq_dt.setDecimals(3)
+    window.set_acq_dt.setRange(0.1, 10000)
+    window.set_acq_dt.setDecimals(1)
     window.set_acq_dt.setSuffix("us")
     window.set_acq_dt.setSingleStep(0.001)
     window.set_acq_dt.setValue(DEFAULT_VALUES['dt'])

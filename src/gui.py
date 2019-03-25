@@ -25,8 +25,9 @@ matplotlib.rcParams.update({'axes.labelsize': FONTSIZE,
 
 DEFAULT_VALUES = {'alpha':2.95,
                   'Tstate':200,
-                  'dt':0.1,
-                  'gain':1000.,
+                  'acq.freq.':10., # in kHz
+                  'dt':1e-4, # in second
+                  'gain':1., # mV / V
                   'Tsmooth':42.,
                   'Tsubsampling':5.,
                   'p0_percentile':1.,
@@ -75,17 +76,18 @@ class Window(QtWidgets.QMainWindow):
             self.AX_large_view, self.AX_zoom,\
             self.canvas_large_view, self.canvas_zoom = create_plot_window(self)
 
-        self.data = {'dt':100} # initialized to empty data
         # program defaults
         self.params = DEFAULT_VALUES
-        
+        self.data = {}
         try:
             old_params = dict(np.load('data/last_params.npz'))
             for key in old_params:
                 self.params[key] = old_params[key]
         except (FileNotFoundError, ValueError, IndexError, TypeError, KeyError):
-            pass
-        self.filename, self.folder = 'data/sample_data.npz', 'data/'
+            self.data = {} # initialized to empty data
+            
+        # self.filename, self.folder = 'data/sample_data.npz', 'data/'
+        self.filename, self.folder = '', 'data/'
 
         ## ------------ Recording and Analysis parameters ----------- ##
         set_recording_params(self, y0=30)
@@ -93,13 +95,17 @@ class Window(QtWidgets.QMainWindow):
         
         self.window.show()    
         self.show()
-        
-        self.load_data(self.filename)
-        self.set_acq_dt.setValue(1e6*self.data['dt'])
-        self.large_scale_plot()
-        self.zoom_plot()
+
+        # self.load_data(self.filename)
+        # self.large_scale_plot()
+        # self.zoom_plot()
 
     def zoom1(self):
+        if 'pLFP' in self.data:
+            self.large_scale_plot_NSI()
+        else:
+            self.large_scale_plot()
+        self.zoom_plot()
         self.statusBar.showMessage('Draw a rectangle in the TOP plot to set a new zoom')
         self.rs=RectangleSelector(self.AX_large_view, self.onselect,
                              drawtype='box',
@@ -123,12 +129,25 @@ class Window(QtWidgets.QMainWindow):
         
         self.data = load_formatted_data(self.filename) # see function in src/IO.py
         self.Vext_key = self.data['Channel_Keys'][0] # first key by default
-        self.dt = self.data['dt']
-        self.nsamples = len(self.set_acq_gain.value()*self.data[self.Vext_key])
+        
+        # update of acquisition frequency from the data
+        if 'dt' not in self.data:
+            print('======================================')
+            print('     time step not found in data file !')
+            print(' ----> set by default to ', 1e-3/DEFAULT_VALUES['acq.freq.'], 'ms')
+            print('  ==> you can change it manually on the interface <==')
+            print('======================================')
+            print('the acqusition freq.  was not extracted from the datafile')
+            self.data['dt'] = 1e-3/DEFAULT_VALUES['acq.freq.']
+        self.set_acq_freq.setValue(1e-3/self.data['dt'])
+        if 'gain' not in self.data:
+            print('the gain was not extracted from the datafile')
+            self.data['gain'] = DEFAULT_VALUES['gain']
+        self.set_acq_gain.setValue(self.data['gain'])
+        
+        self.nsamples = len(self.data[self.Vext_key])
         self.filename_textbox.setText('Filename: '+self.filename)
         self.statusBar.showMessage('Data loaded, now "Run Analysis"')
-
-
         
     def large_scale_plot(self, Nplot=2000):
         """
@@ -189,7 +208,7 @@ class Window(QtWidgets.QMainWindow):
         if ((self.Vext_key in self.data) and ('dt' in self.data)):
             i1, i2 = int(self.params['xlim'][0]/self.data['dt']), int(self.params['xlim'][1]/self.data['dt'])
             isubsampling = max([1,int((i2-i1)/Nplot)])
-            lfp_to_plot = self.set_acq_gain.value()*self.data[self.Vext_key][i1:i2][::isubsampling]
+            lfp_to_plot = self.data['gain']*self.data[self.Vext_key][i1:i2][::isubsampling]
             self.AX_zoom[0].plot(np.arange(len(lfp_to_plot))*self.data['dt']*isubsampling+self.params['xlim'][0],
                                  lfp_to_plot, lw=0.5, color=Grey)
             y1, y2 = np.min(lfp_to_plot), np.max(lfp_to_plot)
@@ -247,7 +266,7 @@ class Window(QtWidgets.QMainWindow):
         self.statusBar.showMessage("Analyzing data [...]")
         f0, w0 = self.set_rootfreq.value(), self.set_bandfactor.value()
         preprocess_LFP(self.data,
-                       gain = self.set_acq_gain.value(),
+                       gain = self.data['gain'],
                        Vext_key=self.Vext_key,
                        freqs = np.linspace(f0/w0, f0*w0, self.set_N_wvlts.value()),
                        # percentile_for_p0=self.set_p0_percentile.value()/100.,                   
@@ -275,7 +294,7 @@ class Window(QtWidgets.QMainWindow):
                 self.update_keys()
                 self.large_scale_plot()
                 self.zoom_plot()
-                self.statusBar.showMessage('Data succesfully loaded !')
+                self.statusBar.showMessage('Data succesfully loaded !     ----> check (and possibly modify) the acq. freq. and gain')
             except FileNotFoundError:
                 self.statusBar.showMessage('/!\ No datafile found... ')
         else:
@@ -291,12 +310,21 @@ class Window(QtWidgets.QMainWindow):
         self.Vext_key = self.set_acq_channel.currentText()
         self.large_scale_plot()
         self.zoom_plot()
+
+    def acq_freq_change(self, new_freq):
+        self.data['dt'] = 1e-3/float(new_freq)
+        self.statusBar.showMessage('/!\ Acquisition Frequency has changed ! Use the "Zoom1" function to refresh the plots')
+
+    def gain_change(self, new_gain):
+        self.data['gain'] = 1e3*float(new_gain)
+        self.statusBar.showMessage('gain has changed, use the "zooms" updates to refresh the plots')
         
     def close_app(self):
         if self.params is not None:
-            print(self.filename, self.folder)
             self.params['filename'] = self.filename
             self.params['folder'] = self.folder
+            self.params['acq.freq.'] = 1e-3/self.data['dt']
+            self.params['gain'] = self.data['gain']
             np.savez('data/last_params.npz', **self.params)
         sys.exit()
         
@@ -314,7 +342,7 @@ class Window(QtWidgets.QMainWindow):
 
     def reset_program_settings(self):
         self.params = {'xlim':[0,20]}
-        self.set_acq_dt.setValue(DEFAULT_VALUES['dt'])
+        self.set_acq_freq.setValue(DEFAULT_VALUES['acq.freq'])
         self.set_acq_gain.setValue(DEFAULT_VALUES['gain'])
         self.set_Tstate.setValue(DEFAULT_VALUES['Tstate'])
         self.set_alpha.setValue(DEFAULT_VALUES['alpha'])
@@ -374,29 +402,31 @@ def set_recording_params(window, x0=10, y0=30):
     myFont.setBold(True)
     window.filename_textbox.setFont(myFont)
     # acquisision time step ---> changed here !
-    window.set_acq_dt_text = QtWidgets.QLabel('Acq. Time Step:', window)
-    window.set_acq_dt_text.setMinimumWidth(300)
-    window.set_acq_dt_text.move(x0, y0+30)
-    window.set_acq_dt = QtWidgets.QDoubleSpinBox(window)
-    window.set_acq_dt.setMaximumWidth(100)
-    window.set_acq_dt.move(x0+100, y0+30)
-    window.set_acq_dt.setRange(0.1, 10000)
-    window.set_acq_dt.setDecimals(1)
-    window.set_acq_dt.setSuffix("us")
-    window.set_acq_dt.setSingleStep(0.001)
-    window.set_acq_dt.setValue(DEFAULT_VALUES['dt'])
+    window.set_acq_freq_text = QtWidgets.QLabel('Acq. Freq.:', window)
+    window.set_acq_freq_text.setMinimumWidth(300)
+    window.set_acq_freq_text.move(x0, y0+30)
+    window.set_acq_freq = QtWidgets.QDoubleSpinBox(window)
+    window.set_acq_freq.setMaximumWidth(100)
+    window.set_acq_freq.move(x0+100, y0+30)
+    window.set_acq_freq.setRange(0.1, 100)
+    window.set_acq_freq.setDecimals(1)
+    window.set_acq_freq.setSuffix(" kHz")
+    window.set_acq_freq.setSingleStep(10)
+    window.set_acq_freq.setValue(DEFAULT_VALUES['dt'])
+    window.set_acq_freq.valueChanged.connect(window.acq_freq_change)
     # acquisision time step ---> changed here !
     window.set_acq_gain_text = QtWidgets.QLabel('Channel Gain:', window)
     window.set_acq_gain_text.setMinimumWidth(300)
     window.set_acq_gain_text.move(x0+400, y0+30)
     window.set_acq_gain = QtWidgets.QDoubleSpinBox(window)
-    window.set_acq_gain.setMaximumWidth(100)
-    window.set_acq_gain.setSuffix("uV")
+    window.set_acq_gain.setMaximumWidth(200)
+    window.set_acq_gain.setSuffix(" mV/V")
     window.set_acq_gain.setDecimals(3)
     window.set_acq_gain.move(x0+490, y0+30)
     window.set_acq_gain.setRange(0.001, 1000.0)
-    window.set_acq_gain.setSingleStep(0.001)
+    window.set_acq_gain.setSingleStep(10)
     window.set_acq_gain.setValue(DEFAULT_VALUES['gain'])
+    window.set_acq_gain.valueChanged.connect(window.gain_change)
     # acquisision channel ---> changed here !
     window.set_acq_channel_text = QtWidgets.QLabel('Channel:', window)
     window.set_acq_channel_text.setMinimumWidth(300)

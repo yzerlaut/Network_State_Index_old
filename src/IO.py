@@ -19,14 +19,9 @@ def load_formatted_data(filename):
         try:
             data['dt'] = float(data['params']['dt'])
         except KeyError:
-            data['dt'] = 1e-3
-            print('======================================')
-            print('time step not found in HDF5 file !')
-            print(' ----> set by default to 1ms ')
-            print('======================================')
-
+            pass
     else:
-        data = {'dt':1e-3}
+        data = {}
     return data
 
 """

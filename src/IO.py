@@ -4,12 +4,25 @@ import numpy as np
 import os
 
 def load_formatted_data(filename):
+    
     print('Opening: ', filename)
+
+    # -----------------------------
+    # NPZ file
     if filename.endswith('.npz'):
         data = dict(np.load(filename))
-        data['Channel_Keys'] = ['Extra']
+        data['Channel_Keys'] = []
+        for key in data.keys():
+            if key not in ['dt', 'params', 't', 'Channel_Keys']:
+                data['Channel_Keys'].append(key)
+                
+    # -----------------------------
+    # ABF file (from pClamp recording software, Axon Instruments / Molecular Device)
     elif filename.endswith('.abf'):
         data = load_axon_file(filename)
+        
+    # -----------------------------
+    # HDF5 file (from RTXI, custom softwares, etc..)
     elif filename.endswith('.h5'):
         data = load_dict_from_hdf5(filename)
         data['Channel_Keys'] = []

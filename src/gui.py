@@ -1,4 +1,6 @@
 import sys, os, pathlib
+sys.path.append('./')
+sys.path.append(str(pathlib.Path(__file__).resolve()))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 from src.functions import * # all functions required to make the analysis
@@ -25,9 +27,8 @@ matplotlib.rcParams.update({'axes.labelsize': FONTSIZE,
 
 DEFAULT_VALUES = {'alpha':2.95,
                   'Tstate':200,
-                  'acq.freq.':10., # in kHz
-                  'dt':1e-4, # in second
-                  'gain':1., # mV / V
+                  'acq_freq_kHz':10., # in kHz
+                  'gain_mVpV':1., # mV / V
                   'Tsmooth':42.,
                   'Tsubsampling':5.,
                   'p0_percentile':1.,
@@ -78,13 +79,14 @@ class Window(QtWidgets.QMainWindow):
 
         # program defaults
         self.params = DEFAULT_VALUES
-        self.data = {}
+        self.data = {'dt':1e-3/DEFAULT_VALUES['acq_freq_kHz'],
+                     'gain':1e3*DEFAULT_VALUES['gain_mVpV']} # dt=0.1ms, gain=1mV/V by default
         try:
             old_params = dict(np.load('data/last_params.npz'))
             for key in old_params:
                 self.params[key] = old_params[key]
         except (FileNotFoundError, ValueError, IndexError, TypeError, KeyError):
-            self.data = {} # initialized to empty data
+            pass
             
         # self.filename, self.folder = 'data/sample_data.npz', 'data/'
         self.filename, self.folder = '', 'data/'
@@ -95,10 +97,6 @@ class Window(QtWidgets.QMainWindow):
         
         self.window.show()    
         self.show()
-
-        # self.load_data(self.filename)
-        # self.large_scale_plot()
-        # self.zoom_plot()
 
     def zoom1(self):
         if 'pLFP' in self.data:
@@ -131,23 +129,27 @@ class Window(QtWidgets.QMainWindow):
         self.Vext_key = self.data['Channel_Keys'][0] # first key by default
         
         # update of acquisition frequency from the data
-        if 'dt' not in self.data:
-            print('======================================')
-            print('     time step not found in data file !')
-            print(' ----> set by default to ', 1e-3/DEFAULT_VALUES['acq.freq.'], 'ms')
-            print('  ==> you can change it manually on the interface <==')
-            print('======================================')
-            print('the acqusition freq.  was not extracted from the datafile')
-            self.data['dt'] = 1e-3/DEFAULT_VALUES['acq.freq.']
+        if ('dt' not in self.data) and ('gain' not in self.data):
+            self.data['dt'] = 1e-3/DEFAULT_VALUES['acq_freq_kHz']
+            self.data['gain'] = 1e3/DEFAULT_VALUES['gain_mVpV']
+            self.statusBar.showMessage('Data loaded !                              /!\ ACQ.FREQ. and GAIN not found in the datafile, '+\
+                                       'need to set them manually /!\ ')
+        elif ('dt' not in self.data):
+            self.data['dt'] = 1e-3/DEFAULT_VALUES['acq_freq_kHz']
+            self.statusBar.showMessage('Data loaded !                              /!\ ACQ.FREQ. not found in the datafile, '+\
+                                       'need to set it manually /!\ ')
+        elif ('gain_mVpV' not in self.data):
+            self.data['gain'] = 1e3/DEFAULT_VALUES['gain_mVpV']
+            self.statusBar.showMessage('Data loaded !                              /!\ GAIN not found in the datafile, '+\
+                                       'need to set it manually /!\ ')
+
+        # we update the GUI values according to the newly set values
         self.set_acq_freq.setValue(1e-3/self.data['dt'])
-        if 'gain' not in self.data:
-            print('the gain was not extracted from the datafile')
-            self.data['gain'] = DEFAULT_VALUES['gain']
-        self.set_acq_gain.setValue(self.data['gain'])
+        self.set_acq_gain.setValue(1e-3*self.data['gain'])
         
         self.nsamples = len(self.data[self.Vext_key])
         self.filename_textbox.setText('Filename: '+self.filename)
-        self.statusBar.showMessage('Data loaded, now "Run Analysis"')
+        # self.statusBar.showMessage('Data loaded, now "Run Analysis"')
         
     def large_scale_plot(self, Nplot=2000):
         """
@@ -158,8 +160,8 @@ class Window(QtWidgets.QMainWindow):
         """
         while len(self.AX_large_view.lines)>0:
             del self.AX_large_view.lines[-1] # removing the previous plot
+            
         # large scale version
-
         if (self.Vext_key in self.data) and ('dt' in self.data):
             lfp_to_plot = self.data[self.Vext_key][::int(self.nsamples/Nplot)]
             ymin, ymax, ymean = np.min(lfp_to_plot), np.max(lfp_to_plot), np.mean(lfp_to_plot)
@@ -168,8 +170,8 @@ class Window(QtWidgets.QMainWindow):
                                     (lfp_to_plot-ymean)*scaling+15., lw=0.5, color=Grey)
             self.AX_large_view.set_xlim([0, self.data['dt']*self.nsamples])
             self.canvas_large_view.draw()
-        else:
-            self.statusBar.showMessage('No data available [...]')
+        # else:
+        #     self.statusBar.showMessage('No data available [...]')
 
     def large_scale_plot_NSI(self, Nplot=2000):
         
@@ -213,8 +215,6 @@ class Window(QtWidgets.QMainWindow):
                                  lfp_to_plot, lw=0.5, color=Grey)
             y1, y2 = np.min(lfp_to_plot), np.max(lfp_to_plot)
             self.AX_zoom[0].set_ylim([y1-0.05*(y2-y1), y2+0.05*(y2-y1)])
-        else:
-            self.statusBar.showMessage('No data available [...]')
 
         if ('pLFP' in self.data):
             
@@ -259,8 +259,8 @@ class Window(QtWidgets.QMainWindow):
             self.AX_large_view.fill_between([i1*self.data['dt'], i2*self.data['dt']], [-10,-10], [20,20], color='r', alpha=.2, lw=0)
             self.AX_large_view.set_ylim([-10,20])
             self.canvas_large_view.draw()
-        else:
-            self.statusBar.showMessage('No data available [...]')
+        # else:
+        #     self.statusBar.showMessage('No data available [...]')
         
     def analyze(self):
         self.statusBar.showMessage("Analyzing data [...]")
@@ -294,7 +294,6 @@ class Window(QtWidgets.QMainWindow):
                 self.update_keys()
                 self.large_scale_plot()
                 self.zoom_plot()
-                self.statusBar.showMessage('Data succesfully loaded !     ----> check (and possibly modify) the acq. freq. and gain')
             except FileNotFoundError:
                 self.statusBar.showMessage('/!\ No datafile found... ')
         else:
@@ -323,8 +322,8 @@ class Window(QtWidgets.QMainWindow):
         if self.params is not None:
             self.params['filename'] = self.filename
             self.params['folder'] = self.folder
-            self.params['acq.freq.'] = 1e-3/self.data['dt']
-            self.params['gain'] = self.data['gain']
+            self.params['acq_freq_kHz'] = 1e-3/self.data['dt']
+            self.params['gain_mVpV'] = 1e-3*self.data['gain']
             np.savez('data/last_params.npz', **self.params)
         sys.exit()
         
@@ -343,7 +342,7 @@ class Window(QtWidgets.QMainWindow):
     def reset_program_settings(self):
         self.params = {'xlim':[0,20]}
         self.set_acq_freq.setValue(DEFAULT_VALUES['acq.freq'])
-        self.set_acq_gain.setValue(DEFAULT_VALUES['gain'])
+        self.set_acq_gain.setValue(DEFAULT_VALUES['gain_mVpV'])
         self.set_Tstate.setValue(DEFAULT_VALUES['Tstate'])
         self.set_alpha.setValue(DEFAULT_VALUES['alpha'])
         
@@ -425,7 +424,7 @@ def set_recording_params(window, x0=10, y0=30):
     window.set_acq_gain.move(x0+490, y0+30)
     window.set_acq_gain.setRange(0.001, 1000.0)
     window.set_acq_gain.setSingleStep(10)
-    window.set_acq_gain.setValue(DEFAULT_VALUES['gain'])
+    window.set_acq_gain.setValue(DEFAULT_VALUES['gain_mVpV'])
     window.set_acq_gain.valueChanged.connect(window.gain_change)
     # acquisision channel ---> changed here !
     window.set_acq_channel_text = QtWidgets.QLabel('Channel:', window)

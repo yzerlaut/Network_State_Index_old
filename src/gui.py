@@ -411,7 +411,7 @@ def set_recording_params(window, x0=10, y0=30):
     window.set_acq_freq.setDecimals(1)
     window.set_acq_freq.setSuffix(" kHz")
     window.set_acq_freq.setSingleStep(10)
-    window.set_acq_freq.setValue(DEFAULT_VALUES['dt'])
+    window.set_acq_freq.setValue(1)
     window.set_acq_freq.valueChanged.connect(window.acq_freq_change)
     # acquisision time step ---> changed here !
     window.set_acq_gain_text = QtWidgets.QLabel('Channel Gain:', window)

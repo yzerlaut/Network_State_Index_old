@@ -1,7 +1,11 @@
-# Identifying Network State from Extracellular Recordings during Wakefulness in Neocortex
+# Network State Index
 
+### Identifying Network State from Extracellular Recordings during Wakefulness in Neocortex
 
-Implements a quantitative characterization of network states in neocortex from the signal recorded by an extracellular electrode. See the paper details about the method.
+This module provides a quantitative characterization of network states in neocortex from extracellular signals. This implements the analysis described in (please cite if you use this code !):
+> Network States Classification based on Local Field Potential Recordings in the Awake Mouse Neocortex
+> Yann Zerlaut, Stefano Zucca, Tommaso Fellin, Stefano Panzeri
+> bioRxiv 2022.02.08.479568; doi: https://doi.org/10.1101/2022.02.08.479568
 
 ----
 
@@ -10,46 +14,32 @@ Implements a quantitative characterization of network states in neocortex from t
 
 ----
 
-## Dependencies
-
-- [Python 3][python], [Numpy][numpy], [Scipy][scipy]
-- [Neo][neo] to be able to load electrophysiological data
-- [PyQT][pyqt] for the Graphical User Interface (GUI), -- optional --
-
-----
-
 ## Installation
 
-- Install a scientific python distribution (the [Anaconda version][anaconda] is a very good one). Choose the Python 3 version. It contains [Numpy][numpy] and [Scipy][scipy].
+1. Install a python distribution for scientific analysis:
 
-- Install PyQT5: open the terminal (or the MsWin Command Prompt) and run:
+   get the [latest Miniconda distribution](https://docs.conda.io/en/latest/miniconda.html) and install it on your home folder.
+   
+2. Run the following in the [Anaconda prompt](https://docs.anaconda.com/anaconda/user-guide/getting-started/#write-a-python-program-using-anaconda-prompt-or-terminal):
+
 ```
-pip install PyQT5
+git clone https://github.com/yzerlaut/Network_State_Index.gitb
+cd Network_State_Index
+pip install .
 ```
 
-- Install Neo: open the terminal (or the MsWin Command Prompt) and run:
+## usage
+
+- Run the software GUI
+
 ```
-pip install neo
+python src/gui.py
 ```
 
-- Download the present code
-  1) If you have git
-  ```
-	git clone https://github.com/yzerlaut/Waking_State_Index.git
-  ```
-
-  2) If you don't, download the zip archive: [https://github.com/yzerlaut/Waking_State_Index/archive/master.zip] and extract it.
-
-----
-
-## Run the program
-  Open the terminal (or the MsWin Command Prompt)
-  
-  ```
-  cd path_where_you_have_extracted_or_cloned_the_archive/Waking_State_Index/ # replace 'cd' by 'chdir' on MSWin
-  
-  python src/gui.py
-  ```
+- Using the notebook implmentation
+```
+jupyter notebook notebook_demo.ipynb
+```
 
 ----
 

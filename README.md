@@ -1,8 +1,8 @@
 # Network State Index
 
-### Identifying Network State from Extracellular Recordings during Wakefulness in Neocortex
+#### Identifying Network State from Extracellular Recordings during Wakefulness in Neocortex
 
-This module provides a quantitative characterization of network states in neocortex from extracellular signals. This implements the analysis described in (please cite if you use this code !):
+This module provides a quantitative characterization of network states in neocortex from extracellular signals. It implements the analysis described in the following article (please cite if you use this code !):
 > Network States Classification based on Local Field Potential Recordings in the Awake Mouse Neocortex
 > Yann Zerlaut, Stefano Zucca, Tommaso Fellin, Stefano Panzeri
 > bioRxiv 2022.02.08.479568; doi: https://doi.org/10.1101/2022.02.08.479568

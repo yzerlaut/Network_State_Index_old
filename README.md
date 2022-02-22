@@ -28,12 +28,18 @@ cd Network_State_Index
 pip install .
 ```
 
-## usage
+If you do not wish to clone the repository you can also directly:
+```
+pip install git+https://github.com/yzerlaut/Network_State_Index
+```
+
+
+## Usage
 
 - Run the software GUI
 
 ```
-python src/gui.py
+python -m NSI
 ```
 
 - Using the notebook implmentation
@@ -77,7 +83,6 @@ In the bottom 3 plots, we show a zoomed (subsampled) portion of the data. Highli
 
 The output is stored as an hdf5 datafile.
 It containes the sample times of validated network states and their associated NSI level.
-
 
 [packaging guide]: https://packaging.python.org
 [distribution tutorial]: https://packaging.python.org/en/latest/distributing.html

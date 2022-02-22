@@ -3,8 +3,8 @@ sys.path.append('./')
 sys.path.append(str(pathlib.Path(__file__).resolve()))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
-from src.functions import * # all functions required to make the analysis
-from src.IO import * # module to load data, including electrophysiogical recordings
+from NSI.functions import * # all functions required to make the analysis
+from NSI.IO import * # module to load data, including electrophysiogical recordings
 
 # then modules for GUI
 import matplotlib
@@ -16,7 +16,7 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from matplotlib.widgets import RectangleSelector
 import datetime
 
-FONTSIZE= 5
+FONTSIZE= 8
 matplotlib.rcParams.update({'axes.labelsize': FONTSIZE,
                             'axes.titlesize': FONTSIZE,
                             'figure.titlesize': FONTSIZE,
@@ -125,7 +125,7 @@ class Window(QtWidgets.QMainWindow):
 
         self.statusBar.showMessage('loading data [...]')
         
-        self.data = load_formatted_data(self.filename) # see function in src/IO.py
+        self.data = load_formatted_data(self.filename) # see function in NSI/IO.py
         self.Vext_key = self.data['Channel_Keys'][0] # first key by default
         
         # update of acquisition frequency from the data

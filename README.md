@@ -1,4 +1,4 @@
-# Network State Index
+# Network State Index (NSI)
 
 #### Identifying Network State from Extracellular Recordings during Wakefulness in Neocortex
 

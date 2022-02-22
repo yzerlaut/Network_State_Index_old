@@ -86,8 +86,7 @@ def preprocess_LFP(data,
     isubsmpl = int(new_dt/data['dt'])
     
     # then smoothing and subsampling
-    data['pLFP'] = gaussian_smoothing(\
-                                      np.reshape(W2[:int(len(W2)/isubsmpl)*isubsmpl],
+    data['pLFP'] = gaussian_smoothing(np.reshape(W2[:int(len(W2)/isubsmpl)*isubsmpl],
                                                  (int(len(W2)/isubsmpl),isubsmpl)).mean(axis=1),
                                       int(smoothing/new_dt)).flatten()
     data['new_dt'] = new_dt

@@ -26,6 +26,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "pynwb",
+        "pyabf",
         "scipy",
         "numpy",
         "argparse",

@@ -37,19 +37,21 @@ DEFAULT_VALUES = {'alpha':2.95,
                   'N_wavelets':10,
                   'xlim':[0,20]}
 
+
 class Window(QtWidgets.QMainWindow):
     
-    def __init__(self, app, parent=None, DATA_LIST=None, KEYS=None):
+    def __init__(self, app, parent=None, datafile=None, DATA_LIST=None, KEYS=None):
         
         super(Window, self).__init__(parent)
         
         # buttons and functions
-        LABELS = ["q) Quit", "o) Open File", "r) Run analysis", "s) Save Results", "Zoom1", "Zoom2", "Reset Settings"]
+        LABELS = ["q) Quit", "o) Open File", "r) Run analysis", "s) Save Results",
+                  "Zoom1", "Zoom2", "Reset Settings"]
         FUNCTIONS = [self.close_app, self.file_open, self.analyze, self.save_results,\
                      self.zoom1, self.zoom2, self.reset_program_settings]
         button_length = 130
         self.setWindowTitle('Computing the Network State Index')
-        self.setGeometry(50, 50, button_length*(0.5+len(LABELS)), 180)
+        self.setGeometry(50, 50, int(button_length*(0.5+len(LABELS))), 180)
         
         mainMenu = self.menuBar()
         self.fileMenu = mainMenu.addMenu('&File')
@@ -87,14 +89,20 @@ class Window(QtWidgets.QMainWindow):
                 self.params[key] = old_params[key]
         except (FileNotFoundError, ValueError, IndexError, TypeError, KeyError):
             pass
-            
-        # self.filename, self.folder = 'data/sample_data.npz', 'data/'
-        self.filename, self.folder = '', 'data/'
 
+        self.folder = './data/'
+        self.filename = (datafile if datafile is not None else '')
+        
         ## ------------ Recording and Analysis parameters ----------- ##
         set_recording_params(self, y0=30)
         set_analysis_params(self, y0=90)
         
+        if (self.filename is not None) and os.path.isfile(self.filename):
+            self.load_data(self.filename)
+            self.update_keys()
+            self.large_scale_plot()
+            self.zoom_plot()
+            
         self.window.show()    
         self.show()
 
@@ -126,6 +134,7 @@ class Window(QtWidgets.QMainWindow):
         self.statusBar.showMessage('loading data [...]')
         
         self.data = load_formatted_data(self.filename) # see function in NSI/IO.py
+        print(self.data)
         self.Vext_key = self.data['Channel_Keys'][0] # first key by default
         
         # update of acquisition frequency from the data
@@ -268,7 +277,7 @@ class Window(QtWidgets.QMainWindow):
         preprocess_LFP(self.data,
                        gain = self.data['gain'],
                        Vext_key=self.Vext_key,
-                       freqs = np.linspace(f0/w0, f0*w0, self.set_N_wvlts.value()),
+                       freqs = np.linspace(f0/w0, f0*w0, int(self.set_N_wvlts.value())),
                        # percentile_for_p0=self.set_p0_percentile.value()/100.,                   
                        new_dt = self.set_subsampling.value()*1e-3,
                        smoothing=self.set_Tsmooth.value()*1e-3)
@@ -371,7 +380,7 @@ def create_plot_window(parent, x0=10, y0=250, hspace=0.1, left=0.08, right=0.99,
         
     # Window size choosen appropriately
     window = QtWidgets.QDialog()
-    window.setGeometry(x0, y0, width, height)
+    window.setGeometry(int(x0), int(y0), int(width), int(height))
 
     # this is the Canvas Widget that displays the `figure`
     # it takes the `figure` instance as a parameter to __init__
@@ -521,6 +530,7 @@ def set_analysis_params(window, x0=10, y0=60):
     window.set_subsampling.setRange(0.1, 100.0)
     window.set_subsampling.setSingleStep(0.1)
     window.set_subsampling.setValue(DEFAULT_VALUES['Tsubsampling'])
+    
     # # p0 percentile ---> changed here !
     # window.set_p0_percentile_text = QtWidgets.QLabel('p0 percentile:', window)
     # window.set_p0_percentile_text.setMinimumWidth(300)
@@ -536,8 +546,16 @@ def set_analysis_params(window, x0=10, y0=60):
 
         
 if __name__ == '__main__':
+
+    import argparse
+
+    parser=argparse.ArgumentParser(description="GUI for NSI characterization",
+                                   formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-f', "--filename", type=str, default='')
+    args = parser.parse_args()
+
     import time
     app = QtWidgets.QApplication(sys.argv)
-    main = Window(app)
+    main = Window(app, datafile=args.filename)
     # main.show()
     sys.exit(app.exec_())

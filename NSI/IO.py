@@ -20,6 +20,7 @@ def load_formatted_data(filename):
     # ABF file (from pClamp recording software, Axon Instruments / Molecular Device)
     elif filename.endswith('.abf'):
         data = load_axon_file(filename)
+        print(data)
         
     # -----------------------------
     # HDF5 file (from RTXI, custom softwares, etc..)
@@ -100,44 +101,22 @@ def recursively_load_dict_contents_from_group(h5file, path):
 """
 Axon Instruments format
 """
-from neo.io import AxonIO
+import pyabf
 
 def load_axon_file(filename, zoom=[0,np.inf]):
 
-    data = AxonIO(filename).read_block(lazy=False)
-    Channel_Keys = []
-    for i in range(len(data.segments[0].analogsignals)):
-        Channel_Keys.append(data.segments[0].analogsignals[i].name)
-
-    formatted_data = {'Channel_Keys':Channel_Keys}
-    
-    # loading the data file
     try:
-        data = AxonIO(filename).read_block(lazy=False)
-        dt =  float(data.segments[0].analogsignals[0].sampling_period)
-        formatted_data['dt'] = dt
-        if zoom[0]<data.segments[0].analogsignals[0].t_start:
-            zoom[0]=data.segments[0].analogsignals[0].t_start
-        if zoom[1]>data.segments[-1].analogsignals[0].t_stop:
-            zoom[1]=data.segments[-1].analogsignals[0].t_stop
-        ### 
-        ii = 0
-        while (ii<len(data.segments)) and (float(data.segments[min(ii,len(data.segments)-1)].analogsignals[0].t_start)<=zoom[0]):
-            ii+=1
-        tt = np.array(data.segments[ii-1].analogsignals[0].times)
-        cond = (tt>=zoom[0]) & (tt<=zoom[1])
-        
-        for j in range(len(Channel_Keys)):
-            formatted_data[Channel_Keys[j]] = np.array(data.segments[ii-1].analogsignals[j])[cond]
-        ### 
-        while (ii<len(data.segments)) and ((float(data.segments[min(ii,len(data.segments)-1)].analogsignals[0].t_start)<=zoom[1])):
-            tt = np.array(data.segments[ii].analogsignals[0].times)
-            cond = (tt>=zoom[0]) & (tt<=zoom[1])
-            for j in range(len(Channel_Keys)):
-                formatted_data[Channel_Keys[j]] = np.concatenate([formatted_data[Channel_Keys[j]],\
-                                                                  np.array(data.segments[ii].analogsignals[j])[cond]])
-            ii+=1
+        abf = pyabf.ABF(filename)
+        channels = abf.adcNames
+        formatted_data = {'Channel_Keys':channels}
+        formatted_data['dt'] = 1./abf.dataRate
+
+        for i, channel in enumerate(channels):
+            abf.setSweep(sweepNumber=0, channel=i)
+            formatted_data[channel] = abf.sweepY
+
         return formatted_data
+    
     except FileNotFoundError:
         print('File not Found !')
         return {}
